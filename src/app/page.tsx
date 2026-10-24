@@ -18,7 +18,16 @@ export default function Home() {
       />
       <button
         className="mt-4 w-full max-w-2xl bg-gray-900 text-white py-3 rounded-lg text-base"
-        onClick={() => setResult(demand)}
+       onClick={() => {
+  if (!demand) {
+    setResult("请先输入你的需求");
+   
+  } else {
+    setResult(demand);
+     setDemand("");
+  }
+}}
+
       >
         开始拆解
       </button>
