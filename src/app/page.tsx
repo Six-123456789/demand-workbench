@@ -4,9 +4,7 @@ import { useState } from "react";
 
 export default function Home() {
   const [demand, setDemand] = useState("");
-  const [result, setResult] = useState("");
-  const [history, setHistory] = useState([]);
-
+  const [history, setHistory] = useState<{ text: string; time: string }[]>([]);
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-white px-6">
@@ -20,35 +18,29 @@ export default function Home() {
       />
       <button
         className="mt-4 w-full max-w-2xl bg-gray-900 text-white py-3 rounded-lg text-base"
-       onClick={() => {
-  if (!demand) {
-    setResult("请先输入你的需求");
-  } else {
-  setHistory([...history, demand]);
-  setResult(demand);
-  setDemand("");
-}
-
-}}
-
+        onClick={() => {
+          if (!demand) {
+            setHistory([...history, { text: "（空输入）请先输入你的需求", time: new Date().toLocaleTimeString() }]);
+          } else {
+            setHistory([...history, { text: demand, time: new Date().toLocaleTimeString() }]);
+            setDemand("");
+          }
+        }}
       >
         开始拆解
       </button>
       <button
-  className="mt-4 w-full max-w-2xl border border-gray-300 py-3 rounded-lg text-base text-gray-500"
-  onClick={() => setHistory([])}
-
->
-  清空
-</button>
-
-   
+        className="mt-4 w-full max-w-2xl border border-gray-300 py-3 rounded-lg text-base text-gray-500"
+        onClick={() => setHistory([])}
+      >
+        清空
+      </button>
       {history.map((item, index) => (
-  <div key={index} className="mt-2 w-full max-w-2xl p-3 border border-gray-200 rounded-lg text-gray-700">
-    {item}
-  </div>
-))}
-
+        <div key={index} className="mt-2 w-full max-w-2xl p-3 border border-gray-200 rounded-lg text-gray-700">
+          {item.text}
+          <span className="text-sm text-gray-500">（{item.time}）</span>
+        </div>
+      ))}
     </main>
   );
 }
