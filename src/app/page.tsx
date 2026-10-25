@@ -1,10 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Home() {
   const [demand, setDemand] = useState("");
   const [history, setHistory] = useState<{ text: string; time: string }[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("history");
+    if (saved) {
+      setHistory(JSON.parse(saved));
+    }
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (loaded) {
+      localStorage.setItem("history", JSON.stringify(history));
+    }
+  }, [history, loaded]);
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-white px-6">
@@ -36,9 +51,17 @@ export default function Home() {
         清空
       </button>
       {history.map((item, index) => (
-        <div key={index} className="mt-2 w-full max-w-2xl p-3 border border-gray-200 rounded-lg text-gray-700">
-          {item.text}
-          <span className="text-sm text-gray-500">（{item.time}）</span>
+        <div key={index} className="mt-2 w-full max-w-2xl p-3 border border-gray-200 rounded-lg text-gray-700 flex justify-between items-center">
+          <span>
+            {item.text}
+            <span className="text-sm text-gray-500">（{item.time}）</span>
+          </span>
+          <button
+            className="text-sm text-gray-400 hover:text-red-500"
+            onClick={() => setHistory(history.filter((_, i) => i !== index))}
+          >
+            删除
+          </button>
         </div>
       ))}
     </main>
