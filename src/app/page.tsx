@@ -6,6 +6,7 @@ export default function Home() {
   const [demand, setDemand] = useState("");
   const [history, setHistory] = useState<{ text: string; time: string }[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("history");
@@ -32,17 +33,26 @@ export default function Home() {
         onChange={(e) => setDemand(e.target.value)}
       />
       <button
-        className="mt-4 w-full max-w-2xl bg-gray-900 text-white py-3 rounded-lg text-base"
-        onClick={() => {
+        className="mt-4 w-full max-w-2xl bg-gray-900 text-white py-3 rounded-lg text-base disabled:opacity-50"
+        onClick={async () => {
           if (!demand) {
             setHistory([...history, { text: "（空输入）请先输入你的需求", time: new Date().toLocaleTimeString() }]);
           } else {
-            setHistory([...history, { text: demand, time: new Date().toLocaleTimeString() }]);
+            setLoading(true);
+            const res = await fetch("/api/ask", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ question: demand }),
+            });
+            const data = await res.json();
+            setHistory([...history, { text: data.answer, time: new Date().toLocaleTimeString() }]);
             setDemand("");
+            setLoading(false);
           }
         }}
+        disabled={loading}
       >
-        开始拆解
+        {loading ? "拆解中..." : "开始拆解"}
       </button>
       <button
         className="mt-4 w-full max-w-2xl border border-gray-300 py-3 rounded-lg text-base text-gray-500"
