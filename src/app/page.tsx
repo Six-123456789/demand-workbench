@@ -22,7 +22,8 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedTime, setCopiedTime] = useState("");
+
 
   useEffect(() => {
     const saved = localStorage.getItem("history");
@@ -50,9 +51,10 @@ export default function Home() {
 2. ${d.questions[1] ?? ""}
 3. ${d.questions[2] ?? ""}
 执行方：${d.tags.join("、")}`;
-  await navigator.clipboard.writeText(text);
-  setCopied(true);
-  setTimeout(() => setCopied(false), 1500);
+      await navigator.clipboard.writeText(text);
+    setCopiedTime(item.time);
+    setTimeout(() => setCopiedTime(""), 1500);
+
 };
 
 
@@ -102,16 +104,26 @@ export default function Home() {
         <div key={index} className="mt-2 w-full max-w-2xl p-3 border border-gray-200 rounded-lg text-gray-700">
           {item.detail ? (
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500">
-                {item.detail.name}（{item.time}）
-              </span>
-              <button
-                className="text-sm text-gray-400 hover:text-red-500"
-                onClick={() => setHistory(history.filter((_, i) => i !== index))}
-              >
-                删除
-              </button>
-            </div>
+  <span className="text-sm text-gray-500">
+    {item.detail.name}（{item.time}）
+  </span>
+  <div className="flex gap-3">
+    <button
+      className="text-sm text-gray-400 hover:text-gray-700"
+      onClick={() => copyResult(item)}
+    >
+     {copiedTime === item.time ? "已复制" : "复制"}
+
+    </button>
+    <button
+      className="text-sm text-gray-400 hover:text-red-500"
+      onClick={() => setHistory(history.filter((_, i) => i !== index))}
+    >
+      删除
+    </button>
+  </div>
+</div>
+
           ) : (
             <div className="flex justify-between items-center">
               <span className="whitespace-pre-wrap">
