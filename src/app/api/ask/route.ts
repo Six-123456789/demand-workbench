@@ -13,11 +13,12 @@ export async function POST(req: Request) {
       signal: AbortSignal.timeout(15000),
       body: JSON.stringify({
         model: "deepseek-chat",
+        response_format: { type: "json_object" },
         messages: [
           {
             role: "system",
             content:
-              "你是需求拆解专家。用户会给一句模糊需求，你按以下格式输出：1) 需求名称 2) 类型 3) 难度（低/中/高）4) 工时估计 5) 必须追问的3个问题 6) 执行方标签。只输出内容，不要解释。",
+              '你是需求拆解专家。用户会给一句模糊需求，你必须只输出一个JSON对象（不要任何解释和多余文字），格式：{"name":"需求名称","type":"设计/开发/文案/视频","difficulty":"低/中/高","hours":"工时估计","questions":["问题1","问题2","问题3"],"tags":["执行方标签"]}',
           },
           { role: "user", content: question },
         ],
@@ -25,8 +26,16 @@ export async function POST(req: Request) {
     });
 
     const data = await res.json();
-    const answer = data.choices?.[0]?.message?.content ?? "（没拿到回答，检查 key 或网络）";
-    return NextResponse.json({ answer });
+    const content = data.choices?.[0]?.message?.content ?? "";
+
+    let detail: object | null = null;
+    try {
+      detail = JSON.parse(content);
+    } catch {
+      detail = null;
+    }
+
+    return NextResponse.json({ answer: content, detail });
   } catch {
     return NextResponse.json({ answer: "（后端连接失败，请检查网络后重试）" });
   }
