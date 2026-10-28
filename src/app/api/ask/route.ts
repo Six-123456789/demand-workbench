@@ -68,9 +68,12 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ answer, detail });
-  } catch {
-    return NextResponse.json({
-      answer: "（后端连接失败，请检查网络后重试）",
-    });
-  }
+ } catch (e) {
+  console.log("=== ROUTE ERROR ===", e);
+  return NextResponse.json({
+    answer: "（后端连接失败，请检查网络后重试）",
+  });
 }
+
+
+
