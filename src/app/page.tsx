@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 type Detail = {
   name: string;
@@ -14,7 +14,7 @@ type Detail = {
 type HistoryItem = {
   text: string;
   time: string;
-  detail?: Detail | null;
+  detail?: Detail;
 };
 
 export default function Home() {
@@ -22,145 +22,135 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [copiedTime, setCopiedTime] = useState("");
 
-
+  // 先取：从 localStorage 读历史记录
   useEffect(() => {
-    const saved = localStorage.getItem("history");
-    if (saved) {
-      setHistory(JSON.parse(saved));
+    const stored = localStorage.getItem("demand_history");
+    if (stored) {
+      try {
+        setHistory(JSON.parse(stored));
+      } catch {
+        setHistory([]);
+      }
     }
     setLoaded(true);
   }, []);
 
+  // 后存：history 变了就存回去
   useEffect(() => {
     if (loaded) {
-      localStorage.setItem("history", JSON.stringify(history));
+      localStorage.setItem("demand_history", JSON.stringify(history));
     }
   }, [history, loaded]);
-  
-  const copyResult = async (item: HistoryItem) => {
-  if (!item.detail) return;
-  const d = item.detail;
-  const text = `【需求拆解】${d.name}
-类型：${d.type}
-难度：${d.difficulty}
-工时估计：${d.hours}
-必问问题：
-1. ${d.questions[0] ?? ""}
-2. ${d.questions[1] ?? ""}
-3. ${d.questions[2] ?? ""}
-执行方：${d.tags.join("、")}`;
-      await navigator.clipboard.writeText(text);
-    setCopiedTime(item.time);
-    setTimeout(() => setCopiedTime(""), 1500);
 
-};
+  const handleAsk = async () => {
+    if (!demand.trim()) {
+      alert("请输入需求");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: demand }),
+      });
+      const data = await res.json();
+      const item: HistoryItem = {
+        text: data.answer,
+        time: new Date().toLocaleTimeString("zh-CN"),
+        detail: data.detail ?? undefined,
+      };
+      setHistory([item, ...history]);
+      setDemand("");
+    } catch {
+      const item: HistoryItem = {
+        text: "（连接失败，请重试）",
+        time: new Date().toLocaleTimeString("zh-CN"),
+      };
+      setHistory([item, ...history]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const handleDelete = (time: string) => {
+    setHistory(history.filter((item) => item.time !== time));
+  };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-white px-6">
-      <h1 className="text-4xl font-bold text-gray-900">需求拆解工作台</h1>
-      <p className="mt-3 text-lg text-gray-500">把一句模糊需求，变成能直接开工的方案</p>
+    <main className="max-w-2xl mx-auto p-6">
+      <h1 className="text-3xl font-bold text-center mt-8">需求拆解工作台</h1>
+      <p className="text-gray-500 text-center mt-2 mb-8">
+        把一句模糊需求，变成能直接开工的方案
+      </p>
+
       <textarea
-        className="mt-8 w-full max-w-2xl h-32 p-4 border border-gray-300 rounded-lg text-base outline-none focus:border-gray-900"
-        placeholder="例如：帮我做个好看的海报"
         value={demand}
         onChange={(e) => setDemand(e.target.value)}
-      />
-      <button
-        className="mt-4 w-full max-w-2xl bg-gray-900 text-white py-3 rounded-lg text-base disabled:opacity-50"
-        onClick={async () => {
-          if (!demand) {
-            setHistory([...history, { text: "（空输入）请先输入你的需求", time: new Date().toLocaleTimeString() }]);
-          } else {
-            setLoading(true);
-            try {
-              const res = await fetch("/api/ask", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question: demand }),
-              });
-              const data = await res.json();
-              setHistory([...history, { text: data.answer, time: new Date().toLocaleTimeString(), detail: data.detail ?? null }]);
-            } catch {
-              setHistory([...history, { text: "（拆解失败，请检查网络后重试）", time: new Date().toLocaleTimeString() }]);
-            }
-            setDemand("");
-            setLoading(false);
-          }
-        }}
+        placeholder="例如：电商后台加一个手机号+验证码登录页，登录后跳转订单列表"
+        className="w-full h-28 p-4 border rounded-lg text-sm"
         disabled={loading}
+      />
+
+      <button
+        onClick={handleAsk}
+        disabled={loading}
+        className="w-full bg-gray-900 text-white py-3 rounded-lg mt-4 disabled:opacity-50"
       >
         {loading ? "拆解中..." : "开始拆解"}
       </button>
+
       <button
-        className="mt-4 w-full max-w-2xl border border-gray-300 py-3 rounded-lg text-base text-gray-500"
         onClick={() => setHistory([])}
+        className="w-full border py-3 rounded-lg mt-3"
       >
         清空
       </button>
-      {history.map((item, index) => (
-        <div key={index} className="mt-2 w-full max-w-2xl p-3 border border-gray-200 rounded-lg text-gray-700">
-          {item.detail ? (
-            <div className="flex justify-between items-center">
-  <span className="text-sm text-gray-500">
-    {item.detail.name}（{item.time}）
-  </span>
-  <div className="flex gap-3">
-    <button
-      className="text-sm text-gray-400 hover:text-gray-700"
-      onClick={() => copyResult(item)}
-    >
-     {copiedTime === item.time ? "已复制" : "复制"}
 
-    </button>
-    <button
-      className="text-sm text-gray-400 hover:text-red-500"
-      onClick={() => setHistory(history.filter((_, i) => i !== index))}
-    >
-      删除
-    </button>
-  </div>
-</div>
-
-          ) : (
-            <div className="flex justify-between items-center">
-              <span className="whitespace-pre-wrap">
-                {item.text}
-                <span className="text-sm text-gray-500">（{item.time}）</span>
-              </span>
+      <div className="mt-8 space-y-4">
+        {history.map((item) => (
+          <div key={item.time} className="border rounded-lg p-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs text-gray-400">{item.time}</span>
               <button
-                className="text-sm text-gray-400 hover:text-red-500"
-                onClick={() => setHistory(history.filter((_, i) => i !== index))}
+                onClick={() => handleDelete(item.time)}
+                className="text-xs text-gray-400 hover:text-red-500"
               >
                 删除
               </button>
             </div>
-          )}
-          {item.detail && (
-            <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
-              <p>
-                <span className="text-gray-500">需求名称：</span>
-                <span className="font-medium">{item.detail.name}</span>
-                <span className="ml-3 text-gray-500">类型：</span>{item.detail.type}
-                <span className="ml-3 text-gray-500">难度：</span>{item.detail.difficulty}
-                <span className="ml-3 text-gray-500">工时：</span>{item.detail.hours}
-              </p>
-              <p className="text-gray-500">必问问题：</p>
-              <ul className="list-disc pl-5">
-                {item.detail.questions.map((q, qi) => (
-                  <li key={qi}>{q}</li>
-                ))}
-              </ul>
-              <p>
-                <span className="text-gray-500">执行方：</span>
-                {item.detail.tags.join("、")}
-              </p>
-            </div>
-          )}
-        </div>
-      ))}
+
+            {item.detail ? (
+              <div>
+                <div className="font-bold">{item.detail.name}</div>
+                <div className="text-sm text-gray-600 mt-1">
+                  类型：{item.detail.type} ｜ 难度：{item.detail.difficulty} ｜ 工时：{item.detail.hours}
+                </div>
+                <div className="mt-2">
+                  <div className="text-sm font-semibold">需要确认的问题：</div>
+                  {item.detail.questions.map((q, i) => (
+                    <div key={i} className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
+                      {i + 1}. {q}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 flex gap-2 flex-wrap">
+                  {item.detail.tags.map((t, i) => (
+                  <span key={i} className="text-xs bg-gray-700 text-white px-2 py-1 rounded">
+
+
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm whitespace-pre-wrap">{item.text}</div>
+            )}
+          </div>
+        ))}
+      </div>
     </main>
   );
 }
